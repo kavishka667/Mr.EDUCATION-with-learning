@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mr.Education</title>
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.3.1/css/bootstrap.min.css"
+  />
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    body {
+      background: #f5f7fa;
+      display: flex;
+      height: 100vh;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .chat-container {
+      width: 100%;
+      max-width: 600px;
+      height: 80vh;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .chat-header {
+      padding: 15px 20px;
+      background: #007bff;
+      color: #fff;
+      font-size: 1.25rem;
+      font-weight: 500;
+    }
+
+    .chat-body {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .message {
+      max-width: 80%;
+      margin-bottom: 15px;
+      line-height: 1.4;
+      padding: 10px 15px;
+      border-radius: 20px;
+      position: relative;
+    }
+
+    .message.user {
+      background: #e2f0fb;
+      margin-left: auto;
+      border-bottom-right-radius: 0;
+    }
+
+    .message.bot {
+      background: #f1f1f1;
+      margin-right: auto;
+      border-bottom-left-radius: 0;
+    }
+
+    .chat-footer {
+      padding: 15px;
+      background: #f8f9fa;
+      display: flex;
+      align-items: center;
+    }
+
+    .chat-footer input {
+      flex: 1;
+      border-radius: 20px;
+      border: 1px solid #ced4da;
+      padding: 10px 15px;
+      outline: none;
+      transition: border-color .2s;
+    }
+
+    .chat-footer input:focus {
+      border-color: #007bff;
+    }
+
+    .chat-footer button {
+      margin-left: 10px;
+      border-radius: 20px;
+      padding: 10px 20px;
+    }
+
+    /* Scrollbar styling */
+    .chat-body::-webkit-scrollbar {
+      width: 6px;
+    }
+    .chat-body::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 3px;
+    }
+    .chat-body::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-header">
+      Mr.Education
+    </div>
+    <div id="chatBody" class="chat-body"></div>
+    <div class="chat-footer">
+      <input
+        type="text"
+        id="userInput"
+        placeholder="Type your message here..."
+        autocomplete="off"
+        onkeypress="if(event.key==='Enter'){sendMessage();}"
+      />
+      <button id="sendBtn" class="btn btn-primary" onclick="sendMessage()">
+        Send
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const chatBody = document.getElementById('chatBody');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+
+    function appendMessage(text, sender='bot') {
+      const msg = document.createElement('div');
+      msg.classList.add('message', sender);
+      msg.innerHTML = marked.parse(text);
+      chatBody.appendChild(msg);
+      chatBody.scrollTop = chatBody.scrollHeight;
+    }
+
+    async function sendMessage() {
+      const text = userInput.value.trim();
+      if (!text) return;
+      
+      appendMessage(text, 'user');
+      userInput.value = '';
+      sendBtn.disabled = true;
+
+      try {
+        const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer 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',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'deepseek/deepseek-r1:free',
+            messages: [{ role: 'user', content: text }]
+          })
+        });
+
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.error?.message || res.statusText);
+        }
+
+        const data = await res.json();
+        const reply = data.choices[0].message.content;
+        appendMessage(reply, 'bot');
+      } catch (err) {
+        appendMessage(`**Error:** ${err.message}`, 'bot');
+      } finally {
+        sendBtn.disabled = false;
+        userInput.focus();
+      }
+    }
+
+    // autofocus input on load
+    window.onload = () => userInput.focus();
+  </script>
+</body>
+</html>
